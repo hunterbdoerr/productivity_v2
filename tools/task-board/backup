@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Snapshot the board's data to a dated directory OUTSIDE this repo, so the
+# history survives deleting the repo, the tool, or the data directory itself.
+#
+#   ./backup            take a snapshot (skipped if nothing changed)
+#   ./backup --list     list snapshots, newest last
+#
+# Environment:
+#   TASK_BOARD_BACKUP_DIR    where snapshots go (default ~/.task-board-backups)
+#   TASK_BOARD_DATA          which data directory to snapshot (default ./data)
+#   TASK_BOARD_KEEP_SNAPSHOTS  how many to keep (default 60)
+set -euo pipefail
+cd "$(dirname "$0")"
+
+DATA_DIR="${TASK_BOARD_DATA:-$PWD/data}"
+BACKUP_ROOT="${TASK_BOARD_BACKUP_DIR:-$HOME/.task-board-backups}"
+KEEP="${TASK_BOARD_KEEP_SNAPSHOTS:-60}"
+
+# Trailing `|| true`: with `set -o pipefail` the glob failing on a not-yet-
+# existing backup directory would otherwise abort the script.
+# The trailing slash is stripped before sorting: "...-34/" would otherwise sort
+# after "...-34-1/" ('/' > '-'), putting a same-second snapshot out of order.
+snapshots() { ls -1d "$BACKUP_ROOT"/*/ 2>/dev/null | sed 's:/$::' | sort || true; }
+
+if [ "${1:-}" = "--list" ]; then
+  if [ -z "$(snapshots)" ]; then
+    echo "No snapshots yet in $BACKUP_ROOT"
+    exit 0
+  fi
+  echo "Snapshots in $BACKUP_ROOT (newest last):"
+  snapshots | while read -r dir; do
+    printf '  %s  %s\n' "$(basename "$dir")" "$(du -sh "$dir" | cut -f1)"
+  done
+  exit 0
+fi
+
+if [ "${1:-}" != "" ]; then
+  echo "error: unknown argument '$1' (expected nothing or --list)" >&2
+  exit 2
+fi
+
+if [ ! -d "$DATA_DIR" ]; then
+  echo "error: no data directory at $DATA_DIR — nothing to back up." >&2
+  echo "Run the board once to create it." >&2
+  exit 1
+fi
+
+# Stage the .json files only. The board's own rolling backups live in
+# data/.backups and would balloon every snapshot.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+if ! cp "$DATA_DIR"/*.json "$tmp"/ 2>/dev/null; then
+  echo "error: no .json files in $DATA_DIR — nothing to back up." >&2
+  exit 1
+fi
+
+# Skip identical snapshots, so a daily schedule during a quiet week doesn't
+# push real history out of the retention window.
+latest="$(snapshots | tail -1)"
+if [ -n "$latest" ] && diff -rq "$latest" "$tmp" >/dev/null 2>&1; then
+  echo "No changes since $(basename "$latest") — nothing to do."
+  exit 0
+fi
+
+# Two snapshots in the same second would otherwise land in one directory.
+dest="$BACKUP_ROOT/$(date +%Y-%m-%dT%H-%M-%S)"
+suffix=1
+while [ -e "$dest" ]; do
+  dest="$BACKUP_ROOT/$(date +%Y-%m-%dT%H-%M-%S)-$suffix"
+  suffix=$((suffix + 1))
+done
+mkdir -p "$dest"
+cp "$tmp"/*.json "$dest"/
+echo "Snapshot: $dest"
+ls -1 "$dest" | sed 's/^/  /'
+
+total="$(snapshots | wc -l | tr -d ' ')"
+if [ "$total" -gt "$KEEP" ]; then
+  snapshots | head -n "$((total - KEEP))" | while read -r old; do
+    rm -rf "$old"
+    echo "Pruned: $(basename "$old")"
+  done
+fi

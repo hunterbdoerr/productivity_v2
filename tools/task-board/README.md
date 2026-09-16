@@ -25,6 +25,7 @@ Ctrl-C stops it. Your data is written to disk as you work; there is no save
 button.
 
 ```bash
+tools/task-board/backup           # snapshot data/ outside the repo (see below)
 tools/task-board/run --no-open    # start without opening a browser
 PORT=4546 tools/task-board/run    # use a different port
 
@@ -75,15 +76,17 @@ To back up or move the board, copy `data/`. To start over, delete it.
 
 ### Backups and recovery
 
-Every write to a file keeps a copy of what was there before, under
-`data/.backups/<store>/<timestamp>.json`. The last 100 versions of each file are
-kept (`TASK_BOARD_KEEP_BACKUPS` changes that); identical writes are skipped, so
-the history is real edits rather than churn.
+There are two layers, protecting against different things.
+
+**1. Per-write history, inside `data/`.** Every write first copies what was
+there to `data/.backups/<store>/<timestamp>.json`, keeping the last 100 versions
+of each file (`TASK_BOARD_KEEP_BACKUPS` changes that). Identical writes are
+skipped, so the history is real edits rather than churn.
 
 This matters because the page overwrites an entire file whenever anything
 changes. A stray write — a stale second tab, a bad hand-edit, a script pointed
-at the wrong directory — replaces the whole board. The backups are what make
-that recoverable rather than final.
+at the wrong directory — replaces the whole board. This layer makes that
+recoverable rather than final.
 
 To roll back, stop the server and copy the version you want over the live file:
 
@@ -93,8 +96,70 @@ cp tools/task-board/data/.backups/projects/2026-09-16T21-11-44-592Z.json \
    tools/task-board/data/projects.json
 ```
 
-Then start the board again. Backups live inside `data/`, so they are gitignored
-and travel with the board when you copy the directory.
+**2. Dated snapshots, outside the repo.** Layer 1 lives inside `data/`, so it
+cannot help if the data directory, the tool, or the whole repo goes away. The
+`backup` script copies the JSON files to a dated directory in your home folder:
+
+```bash
+tools/task-board/backup           # take a snapshot
+tools/task-board/backup --list    # list snapshots, newest last
+```
+
+Snapshots go to `~/.task-board-backups/<timestamp>/` — **outside this repo, by
+design**, so deleting the repo does not take the history with it. The last 60
+are kept. A snapshot identical to the previous one is skipped, so a daily
+schedule during a quiet week does not push real history out of the window, and
+`data/.backups` is excluded so snapshots stay small.
+
+It is safe to snapshot while the board is running: writes are atomic, so a
+snapshot catches either the old or the new file, never a half-written one.
+
+To restore a snapshot, stop the server and copy the files back:
+
+```bash
+tools/task-board/backup --list
+cp ~/.task-board-backups/2026-09-16T16-19-17/*.json tools/task-board/data/
+```
+
+Override the defaults with `TASK_BOARD_BACKUP_DIR` and
+`TASK_BOARD_KEEP_SNAPSHOTS`.
+
+### Running the snapshot on a schedule
+
+Nothing is scheduled by default. To snapshot every day at 7pm, write this to
+`~/Library/LaunchAgents/com.task-board.backup.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.task-board.backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/hunterdoerr/Documents/GitHub/productivity_v2/tools/task-board/backup</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>19</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key><string>/tmp/task-board-backup.log</string>
+  <key>StandardErrorPath</key><string>/tmp/task-board-backup.log</string>
+</dict>
+</plist>
+```
+
+Then load it, and check it afterwards:
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.task-board.backup.plist
+launchctl print gui/$(id -u)/com.task-board.backup
+```
+
+`launchd` runs a missed job once the Mac wakes, which `cron` does not. To remove
+it: `launchctl bootout gui/$(id -u)/com.task-board.backup`.
 
 ### Changing the columns
 
