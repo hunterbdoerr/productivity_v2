@@ -204,3 +204,27 @@ button[type="submit"] { background: var(--accent); color: var(--accent-text); bo
 .link-btn:hover { color: var(--danger); }
 .danger { color: var(--danger); border-color: var(--border); }
 .danger:hover { border-color: var(--danger); }
+
+/* ---- todo priorities ---- */
+.todo-section + .todo-section { margin-top: 20px; }
+.todo-section .section-title {
+  display: flex; align-items: center; gap: 6px;
+  border-left: 3px solid var(--prio); padding-left: 8px;
+  color: var(--prio);
+}
+.prio-high { --prio: #d14343; }
+.prio-medium { --prio: #c08328; }
+.prio-low { --prio: var(--text-dim); }
+@media (prefers-color-scheme: dark) {
+  .prio-high { --prio: #ef7c6e; }
+  .prio-medium { --prio: #dda54a; }
+}
+.todo-section .row { border-left: 3px solid var(--prio); }
+.row-controls { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.move-btn {
+  padding: 2px 7px; line-height: 1.2;
+  font-size: 13px; background: transparent; color: var(--text-dim);
+}
+.move-btn:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+.move-btn:disabled { opacity: .3; cursor: default; }
+.prio-select { padding: 3px 5px; font-size: 11px; }

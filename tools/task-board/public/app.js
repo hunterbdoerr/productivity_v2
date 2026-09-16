@@ -281,25 +281,87 @@ function dailyRow(item, isDone) {
 
 /* ---------- todos ---------- */
 
+const PRIORITIES = [
+  { key: 'high', label: 'High' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
+];
+
+// Todos written before priorities existed have no priority field.
+function normalizeTodos() {
+  let changed = false;
+  for (const item of state.todos.items) {
+    if (!PRIORITIES.some((p) => p.key === item.priority)) {
+      item.priority = 'medium';
+      changed = true;
+    }
+  }
+  if (changed) save('todos');
+}
+
 function renderTodos() {
-  const open = $('#todo-open');
+  const sections = $('#todo-sections');
   const done = $('#todo-done');
-  open.textContent = '';
+  sections.textContent = '';
   done.textContent = '';
 
   const openItems = state.todos.items.filter((i) => !i.done);
   const doneItems = state.todos.items.filter((i) => i.done);
 
-  for (const item of openItems) open.append(todoRow(item));
-  for (const item of doneItems) done.append(todoRow(item));
+  for (const { key, label } of PRIORITIES) {
+    const inSection = openItems.filter((i) => i.priority === key);
+    if (!inSection.length) continue; // empty sections are noise, not structure
 
-  if (!openItems.length) open.append(el('li', { className: 'empty', textContent: 'Nothing to do.' }));
+    const list = el('ul', { className: 'list' });
+    inSection.forEach((item, index) => {
+      list.append(todoRow(item, { first: index === 0, last: index === inSection.length - 1 }));
+    });
+
+    sections.append(el('section', { className: `todo-section prio-${key}` }, [
+      el('h2', { className: 'section-title' }, [
+        el('span', { textContent: label }),
+        el('span', { className: 'count', textContent: ` (${inSection.length})` }),
+      ]),
+      list,
+    ]));
+  }
+
+  if (!openItems.length) sections.append(el('p', { className: 'empty', textContent: 'Nothing to do.' }));
+
+  for (const item of doneItems) done.append(todoRow(item));
   $('#todo-done-count').textContent = doneItems.length ? `(${doneItems.length})` : '';
   $('#todo-done-wrap').hidden = !doneItems.length;
   setBadge('#todos-badge', openItems.length);
 }
 
-function todoRow(item) {
+// Swap with the neighbouring item of the same priority. Order within a
+// section is the items' order of appearance in the flat array.
+function moveTodo(item, direction) {
+  const items = state.todos.items;
+  const peers = items.filter((i) => !i.done && i.priority === item.priority);
+  const target = peers[peers.indexOf(item) + direction];
+  if (!target) return;
+  const a = items.indexOf(item);
+  const b = items.indexOf(target);
+  items[a] = target;
+  items[b] = item;
+  save('todos');
+  renderTodos();
+}
+
+// Changing priority drops the item at the bottom of its new section.
+function setTodoPriority(item, priority) {
+  const items = state.todos.items;
+  items.splice(items.indexOf(item), 1);
+  item.priority = priority;
+  const peers = items.filter((i) => !i.done && i.priority === priority);
+  const insertAt = peers.length ? items.indexOf(peers[peers.length - 1]) + 1 : items.length;
+  items.splice(insertAt, 0, item);
+  save('todos');
+  renderTodos();
+}
+
+function todoRow(item, position = null) {
   const box = el('input', { type: 'checkbox', checked: !!item.done });
   box.addEventListener('change', () => {
     item.done = box.checked;
@@ -315,14 +377,37 @@ function todoRow(item) {
     renderTodos();
   });
 
-  return el('li', { className: 'row' }, [
+  const row = el('li', { className: 'row' }, [
     box,
     el('div', { className: 'row-body' }, [
       el('div', { className: 'row-title', textContent: item.title }),
       el('div', { className: 'row-meta', textContent: item.done ? `done ${fmtWhen(item.completedAt)}` : `added ${fmtWhen(item.createdAt)}` }),
     ]),
-    remove,
   ]);
+
+  // Completed items keep their priority but lose the controls for it.
+  if (position) {
+    const up = el('button', { className: 'move-btn', type: 'button', textContent: '↑', title: 'Move up', disabled: position.first });
+    up.setAttribute('aria-label', `Move "${item.title}" up`);
+    up.addEventListener('click', () => moveTodo(item, -1));
+
+    const down = el('button', { className: 'move-btn', type: 'button', textContent: '↓', title: 'Move down', disabled: position.last });
+    down.setAttribute('aria-label', `Move "${item.title}" down`);
+    down.addEventListener('click', () => moveTodo(item, 1));
+
+    const select = el('select', { className: 'prio-select', title: 'Priority' });
+    select.setAttribute('aria-label', `Priority for "${item.title}"`);
+    for (const { key, label } of PRIORITIES) {
+      select.append(el('option', { value: key, textContent: label, selected: key === item.priority }));
+    }
+    select.addEventListener('change', () => setTodoPriority(item, select.value));
+
+    row.append(el('div', { className: 'row-controls' }, [select, up, down, remove]));
+  } else {
+    row.append(remove);
+  }
+
+  return row;
 }
 
 function setBadge(sel, count) {
@@ -365,7 +450,10 @@ function init() {
     e.preventDefault();
     const title = $('#todo-title').value.trim();
     if (!title) return;
-    state.todos.items.push({ id: uid(), title, done: false, createdAt: new Date().toISOString(), completedAt: null });
+    state.todos.items.push({
+      id: uid(), title, done: false, priority: $('#todo-priority').value,
+      createdAt: new Date().toISOString(), completedAt: null,
+    });
     $('#todo-title').value = '';
     save('todos');
     renderTodos();
@@ -428,6 +516,7 @@ function init() {
 loadAll()
   .then(() => {
     init();
+    normalizeTodos();
     renderProjects();
     renderDaily();
     renderTodos();

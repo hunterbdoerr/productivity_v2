@@ -54,9 +54,14 @@
     <div class="pane">
       <form class="add-row" id="todo-form">
         <input type="text" id="todo-title" placeholder="Add a todo…" autocomplete="off" required>
+        <select id="todo-priority" aria-label="Priority">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
         <button type="submit">Add</button>
       </form>
-      <ul class="list" id="todo-open"></ul>
+      <div id="todo-sections"></div>
       <details id="todo-done-wrap">
         <summary>Completed <span class="count" id="todo-done-count"></span></summary>
         <ul class="list muted-list" id="todo-done"></ul>

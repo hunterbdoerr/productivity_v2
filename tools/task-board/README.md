@@ -6,7 +6,8 @@ A very small Jira substitute for one person. Three views over three JSON files:
   timestamped notes.
 - **Daily** — standing operational checks on a recurrence (daily, weekdays,
   weekly, monthly). Each shows up under "Due now" once its interval is up.
-- **Todos** — a flat list for one-off items like scheduling a meeting.
+- **Todos** — one-off items like scheduling a meeting, grouped into High /
+  Medium / Low sections and ordered by hand within each section.
 
 ## Setup
 
@@ -39,6 +40,12 @@ PORT=4546 tools/task-board/run    # use a different port
 Move a card between columns by dragging it, or by opening it and using the
 **Status** dropdown. Dragging within a column reorders it.
 
+On **Todos**, pick a priority when adding an item, and change it later with the
+dropdown on the row — that moves the item to the bottom of its new section. The
+↑ / ↓ buttons reorder an item within its own section only, and are disabled at
+the top and bottom. Empty sections are hidden. Completed items keep their
+priority but leave the sections until un-checked.
+
 ## Config
 
 None. No environment variables, no credentials, no network access — the page
@@ -50,7 +57,11 @@ Plain JSON in `data/`, gitignored, one file per view:
 
 - `projects.json` — `{ columns: [...], cards: [{ id, title, column, notes, createdAt }] }`
 - `daily.json` — `{ items: [{ id, title, frequency, lastCompletedAt, createdAt }] }`
-- `todos.json` — `{ items: [{ id, title, done, createdAt, completedAt }] }`
+- `todos.json` — `{ items: [{ id, title, done, priority, createdAt, completedAt }] }`
+
+`priority` is `high`, `medium` or `low`; anything else is treated as `medium`
+and rewritten on load, so todos written before priorities existed still work.
+Order within a section is the items' order of appearance in the file.
 
 Files are created with sensible defaults on first run. They are meant to be
 readable and hand-editable — edit them with the server stopped, since the page
