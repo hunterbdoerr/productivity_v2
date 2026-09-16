@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Board</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#9744;</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Task Board</h1>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-view="projects" aria-selected="true">Projects</button>
+    <button class="tab" role="tab" data-view="daily" aria-selected="false">
+      Daily <span class="badge" id="daily-badge" hidden>0</span>
+    </button>
+    <button class="tab" role="tab" data-view="todos" aria-selected="false">
+      Todos <span class="badge" id="todos-badge" hidden>0</span>
+    </button>
+  </nav>
+  <span class="status" id="status"></span>
+</header>
+
+<main>
+  <!-- Projects: kanban columns -->
+  <section class="view" id="view-projects">
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- Daily: recurring operational checks -->
+  <section class="view" id="view-daily" hidden>
+    <div class="pane">
+      <form class="add-row" id="daily-form">
+        <input type="text" id="daily-title" placeholder="Add a recurring check…" autocomplete="off" required>
+        <select id="daily-frequency">
+          <option value="daily">Daily</option>
+          <option value="weekdays">Weekdays</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+      <h2 class="section-title">Due now <span class="count" id="daily-due-count"></span></h2>
+      <ul class="list" id="daily-due"></ul>
+      <h2 class="section-title">Done for now</h2>
+      <ul class="list muted-list" id="daily-done"></ul>
+    </div>
+  </section>
+
+  <!-- Todos: simple one-off tasks -->
+  <section class="view" id="view-todos" hidden>
+    <div class="pane">
+      <form class="add-row" id="todo-form">
+        <input type="text" id="todo-title" placeholder="Add a todo…" autocomplete="off" required>
+        <button type="submit">Add</button>
+      </form>
+      <ul class="list" id="todo-open"></ul>
+      <details id="todo-done-wrap">
+        <summary>Completed <span class="count" id="todo-done-count"></span></summary>
+        <ul class="list muted-list" id="todo-done"></ul>
+      </details>
+    </div>
+  </section>
+</main>
+
+<!-- Card detail drawer -->
+<div class="overlay" id="overlay" hidden>
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Card details">
+    <header class="drawer-head">
+      <input type="text" id="card-title" class="drawer-title" aria-label="Card title">
+      <button class="icon-btn" id="card-close" aria-label="Close">&times;</button>
+    </header>
+    <div class="drawer-row">
+      <label for="card-column">Status</label>
+      <select id="card-column"></select>
+    </div>
+    <h3 class="notes-head">Notes</h3>
+    <ul class="notes" id="card-notes"></ul>
+    <form class="note-form" id="note-form">
+      <textarea id="note-text" rows="3" placeholder="Add a note… (Cmd+Enter to save)"></textarea>
+      <button type="submit">Add note</button>
+    </form>
+    <footer class="drawer-foot">
+      <button class="danger" id="card-delete">Delete card</button>
+    </footer>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Start the task board and open it in the browser.
+#   ./run              start and open a browser tab
+#   ./run --no-open    start only
+#   PORT=4546 ./run    use a different port
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "error: node is required but was not found on PATH." >&2
+  echo "Install Node (https://nodejs.org) and try again." >&2
+  exit 1
+fi
+
+export PORT="${PORT:-4545}"
+
+if [[ "${1:-}" != "--no-open" ]] && command -v open >/dev/null 2>&1; then
+  # Give the server a moment to bind before the browser asks for the page.
+  ( sleep 1; open "http://127.0.0.1:${PORT}" ) &
+fi
+
+exec node server.js
