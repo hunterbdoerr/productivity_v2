@@ -96,6 +96,17 @@ Lockfiles are committed when the language produces one.
 - Prefer plain formats that survive without the tool: JSON, CSV, Markdown,
   SQLite. Avoid pickles and bespoke binary formats.
 
+That data is real and usually irreplaceable — it is gitignored, so git will not
+bring it back. Two rules follow:
+
+- **Never test against it.** A tool that reads or writes `data/` takes an
+  environment variable pointing somewhere else, and testing uses that. Seeding
+  fixtures into the live directory, or clearing it afterwards, destroys real
+  work.
+- **A tool that overwrites whole files keeps previous versions**, under
+  `data/.backups/`, pruned to a fixed count. Cheap for small files, and the
+  difference between a mistake being an inconvenience and being a loss.
+
 ## 7. Scope
 
 These tools are personal, local, and not productionalized. That is a

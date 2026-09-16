@@ -27,6 +27,10 @@ button.
 ```bash
 tools/task-board/run --no-open    # start without opening a browser
 PORT=4546 tools/task-board/run    # use a different port
+
+# Point the board at a different data directory. Use this for a scratch board,
+# and ALWAYS for testing, so experiments cannot touch the real one.
+TASK_BOARD_DATA=/tmp/scratch-board PORT=4546 tools/task-board/run
 ```
 
 ### Keyboard
@@ -69,6 +73,29 @@ overwrites a whole file when you change something.
 
 To back up or move the board, copy `data/`. To start over, delete it.
 
+### Backups and recovery
+
+Every write to a file keeps a copy of what was there before, under
+`data/.backups/<store>/<timestamp>.json`. The last 100 versions of each file are
+kept (`TASK_BOARD_KEEP_BACKUPS` changes that); identical writes are skipped, so
+the history is real edits rather than churn.
+
+This matters because the page overwrites an entire file whenever anything
+changes. A stray write — a stale second tab, a bad hand-edit, a script pointed
+at the wrong directory — replaces the whole board. The backups are what make
+that recoverable rather than final.
+
+To roll back, stop the server and copy the version you want over the live file:
+
+```bash
+ls tools/task-board/data/.backups/projects/          # newest is last
+cp tools/task-board/data/.backups/projects/2026-09-16T21-11-44-592Z.json \
+   tools/task-board/data/projects.json
+```
+
+Then start the board again. Backups live inside `data/`, so they are gitignored
+and travel with the board when you copy the directory.
+
 ### Changing the columns
 
 Edit `columns` in `data/projects.json` while the server is stopped. Cards whose
@@ -91,7 +118,10 @@ of the recognised names or move it in the list.
   and reads/writes the JSON files. It binds to `127.0.0.1`, so it is not
   reachable from the network.
 - **No concurrency handling.** Two tabs open at once will overwrite each
-  other's changes — last write wins. Use one tab.
+  other's changes — last write wins. Use one tab. A tab left open from before
+  an edit made elsewhere will push its stale state on the next change, so
+  reload rather than reusing an old tab. The backups above make this
+  recoverable.
 - **Deletes are immediate** and have no undo. Deleting a card takes its notes
   with it, behind a confirm prompt.
 - Writes are atomic (temp file plus rename), so an interrupted write cannot

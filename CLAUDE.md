@@ -11,6 +11,11 @@ before adding or changing a tool — it defines the structure this repo relies o
 - Dependencies, config, and data stay inside the tool's own directory.
 - Never commit secrets. Config comes from a gitignored `.env`; list every
   variable in a committed `.env.example`.
+- **A tool's `data/` directory is the user's real data.** Never seed test
+  fixtures into it, never "clean up" by writing empty state over it, and never
+  point a test run at it. Use the tool's scratch-directory mechanism (for
+  task-board, `TASK_BOARD_DATA`); add one if the tool has none. Snapshot the
+  directory before any change that could write to it.
 
 ## Scope
 
