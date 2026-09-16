@@ -85,12 +85,38 @@ function fmtWhen(iso) {
 
 /* ---------- projects (kanban) ---------- */
 
+// Columns are renameable, so status names map to a tone where we recognise
+// them and fall back to a rotating palette where we don't.
+const COLUMN_TONES = {
+  backlog: 'slate', todo: 'slate', 'to do': 'slate', ideas: 'slate',
+  'in progress': 'blue', doing: 'blue', active: 'blue', 'in flight': 'blue',
+  review: 'purple', 'in review': 'purple', qa: 'purple',
+  blocked: 'red', stuck: 'red',
+  waiting: 'amber', 'on hold': 'amber', paused: 'amber',
+  done: 'green', shipped: 'green', complete: 'green', completed: 'green',
+};
+const TONE_CYCLE = ['slate', 'blue', 'purple', 'amber', 'teal', 'green', 'red'];
+
+// Assign tones for the whole board at once: recognised names keep their
+// meaning, and the rest draw from the tones nobody claimed, so two adjacent
+// columns don't land on the same colour.
+function columnTones(columns) {
+  const named = columns.map((c) => COLUMN_TONES[c.trim().toLowerCase()] ?? null);
+  const taken = new Set(named.filter(Boolean));
+  const spare = TONE_CYCLE.filter((t) => !taken.has(t));
+  const pool = spare.length ? spare : TONE_CYCLE;
+  let next = 0;
+  return named.map((tone) => tone ?? pool[next++ % pool.length]);
+}
+
+
 function renderProjects() {
   const board = $('#board');
   board.textContent = '';
   const { columns, cards } = state.projects;
+  const tones = columnTones(columns);
 
-  for (const column of columns) {
+  columns.forEach((column, columnIndex) => {
     const inColumn = cards.filter((c) => c.column === column);
     const list = el('ul', { className: 'cards' });
 
@@ -124,7 +150,7 @@ function renderProjects() {
       renderProjects();
     });
 
-    const columnEl = el('div', { className: 'column' }, [
+    const columnEl = el('div', { className: `column tone-${tones[columnIndex]}` }, [
       el('div', { className: 'column-head' }, [
         el('span', { textContent: column }),
         el('span', { className: 'count', textContent: String(inColumn.length) }),
@@ -146,7 +172,7 @@ function renderProjects() {
 
     board.append(columnEl);
     if (refocusColumn === column) input.focus();
-  }
+  });
   refocusColumn = null;
 }
 

@@ -228,3 +228,27 @@ button[type="submit"] { background: var(--accent); color: var(--accent-text); bo
 .move-btn:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
 .move-btn:disabled { opacity: .3; cursor: default; }
 .prio-select { padding: 3px 5px; font-size: 11px; }
+
+/* ---- column colour coding ---- */
+/* Each column sets --col; its cards inherit it. */
+.column { --col: var(--text-dim); border-top-width: 3px; border-top-color: var(--col); }
+.column-head > span:first-child { color: var(--col); }
+.cards .card { border-left: 3px solid var(--col); }
+
+.tone-slate  { --col: #64748b; }
+.tone-blue   { --col: #2f6df6; }
+.tone-purple { --col: #7c5cd6; }
+.tone-amber  { --col: #c08328; }
+.tone-teal   { --col: #0f8f87; }
+.tone-green  { --col: #2f8f4e; }
+.tone-red    { --col: #d14343; }
+
+@media (prefers-color-scheme: dark) {
+  .tone-slate  { --col: #93a2b8; }
+  .tone-blue   { --col: #5b8cff; }
+  .tone-purple { --col: #a78bfa; }
+  .tone-amber  { --col: #dda54a; }
+  .tone-teal   { --col: #3cb8ae; }
+  .tone-green  { --col: #57bd7a; }
+  .tone-red    { --col: #ef7c6e; }
+}

@@ -3,7 +3,7 @@
 A very small Jira substitute for one person. Three views over three JSON files:
 
 - **Projects** — a kanban board. Cards move between status columns and hold
-  timestamped notes.
+  timestamped notes. Each column has its own colour, carried onto its cards.
 - **Daily** — standing operational checks on a recurrence (daily, weekdays,
   weekly, monthly). Each shows up under "Due now" once its interval is up.
 - **Todos** — one-off items like scheduling a meeting, grouped into High /
@@ -74,6 +74,14 @@ To back up or move the board, copy `data/`. To start over, delete it.
 Edit `columns` in `data/projects.json` while the server is stopped. Cards whose
 `column` no longer matches an existing column stop being displayed — they stay
 in the file, so fix the value or re-add the column to get them back.
+
+Colours are assigned automatically and not stored in the data. Familiar status
+names keep their meaning whatever position they sit in — backlog and to-do are
+grey, in-progress and doing blue, review purple, blocked and stuck red, waiting
+and on-hold amber, done and shipped green. Any other name takes a colour none
+of the recognised columns claimed, so neighbouring columns stay distinguishable;
+past seven columns the palette repeats. To recolour a column, rename it to one
+of the recognised names or move it in the list.
 
 ## Notes
 
