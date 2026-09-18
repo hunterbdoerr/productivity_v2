@@ -34,6 +34,18 @@ PORT=4546 tools/task-board/run    # use a different port
 TASK_BOARD_DATA=/tmp/scratch-board PORT=4546 tools/task-board/run
 ```
 
+### The tab icon
+
+Each view has its own favicon — bars for Projects, a sun for Daily, a tick for
+Todos — and Daily and Todos carry a red count badge when something is waiting:
+items due now, and open todos. Projects never badges, since cards aren't due.
+
+The icons are SVG data URIs built in `app.js`, so there are no image files to
+build or keep in sync. They are deliberately chunky: a favicon is 16 CSS pixels,
+and thin strokes disappear. The count is legible on a retina display (where the
+icon renders at 32px) and degrades to a plain red dot elsewhere, which still
+says something needs attention.
+
 ### Keyboard
 
 | Where | Key | Does |

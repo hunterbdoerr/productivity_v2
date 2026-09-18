@@ -275,6 +275,7 @@ function renderDaily() {
 
   $('#daily-due-count').textContent = dueItems.length ? `(${dueItems.length})` : '';
   setBadge('#daily-badge', dueItems.length);
+  updateFavicon();
 }
 
 function dailyRow(item, isDone) {
@@ -358,6 +359,7 @@ function renderTodos() {
   $('#todo-done-count').textContent = doneItems.length ? `(${doneItems.length})` : '';
   $('#todo-done-wrap').hidden = !doneItems.length;
   setBadge('#todos-badge', openItems.length);
+  updateFavicon();
 }
 
 // Swap with the neighbouring item of the same priority. Order within a
@@ -442,6 +444,53 @@ function setBadge(sel, count) {
   badge.hidden = count === 0;
 }
 
+/* ---------- favicon ---------- */
+
+// Drawn as an SVG data URI rather than shipped as image files, so the tool
+// stays a single directory with nothing to build. Shapes are chunky on purpose:
+// a favicon is 16px, and thin strokes turn to mush.
+const FAVICONS = {
+  // three kanban bars, in the board's own column colours
+  projects: `
+    <rect x="3" y="12" width="7" height="17" rx="2.5" fill="#64748b"/>
+    <rect x="12.5" y="5" width="7" height="24" rx="2.5" fill="#2f6df6"/>
+    <rect x="22" y="17" width="7" height="12" rx="2.5" fill="#2f8f4e"/>`,
+  // a sun: the thing that comes round every morning
+  daily: `
+    <g stroke="#e8a33d" stroke-width="4.6" stroke-linecap="round">
+      <path d="M16 1.8v3.4M16 26.8v3.4M1.8 16h3.4M26.8 16h3.4"/>
+      <path d="M6.2 6.2l2.4 2.4M23.4 23.4l2.4 2.4M25.8 6.2l-2.4 2.4M8.6 23.4l-2.4 2.4"/>
+    </g>
+    <circle cx="16" cy="16" r="8.2" fill="#e8a33d"/>`,
+  // a fat tick
+  todos: `
+    <path d="M5.5 17.5l6.5 6.5L26.5 8.5" fill="none" stroke="#2f9a54"
+          stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+};
+
+function faviconFor(view, count) {
+  // A count only earns the corner when there is something to act on.
+  const badge = count > 0 ? `
+    <circle cx="23.5" cy="8.5" r="8.5" fill="#fff"/>
+    <circle cx="23.5" cy="8.5" r="7" fill="#d93a2b"/>
+    <text x="23.5" y="8.5" fill="#fff" font-size="${count > 9 ? 8.5 : 11}"
+          font-family="system-ui, -apple-system, sans-serif" font-weight="700"
+          text-anchor="middle" dominant-baseline="central"
+      >${count > 9 ? '9+' : count}</text>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">${FAVICONS[view]}${badge}</svg>`;
+}
+
+function updateFavicon() {
+  const view = localStorage.getItem('task-board:view') || 'projects';
+  const counts = {
+    projects: 0, // cards aren't due, so nothing to count down
+    daily: state.daily ? state.daily.items.filter(isDue).length : 0,
+    todos: state.todos ? state.todos.items.filter((i) => !i.done).length : 0,
+  };
+  const svg = faviconFor(view, counts[view]);
+  document.querySelector('link[rel="icon"]').href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 /* ---------- wiring ---------- */
 
 function showView(name) {
@@ -452,6 +501,7 @@ function showView(name) {
     $(`#view-${view}`).hidden = view !== name;
   }
   localStorage.setItem('task-board:view', name);
+  updateFavicon();
 }
 
 function init() {
